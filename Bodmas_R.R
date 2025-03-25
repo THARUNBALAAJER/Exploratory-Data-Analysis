@@ -1,0 +1,108 @@
+install.packages("DBI")       
+install.packages("RMySQL") 
+install.packages("ggplot2")   # For Data Visualization
+install.packages("dplyr")     # For Data Manipulation
+install.packages("plotly") # For Interactive Visuals
+
+library(DBI)
+library(readxl)
+library(plotly)
+library(dplyr)
+
+
+#retrieving the results from the table and viewing
+orders <- read_excel("C:/Users/Lenovo/Downloads/Database_Inventory_Management_Bodmas.xlsx", 
+                        sheet = "Orders Details")
+Customers_Details<- read_excel("C:/Users/Lenovo/Downloads/Database_Inventory_Management_Bodmas.xlsx",sheet = "Customers Details")
+invoices <- read_excel("C:/Users/Lenovo/Downloads/Database_Inventory_Management_Bodmas.xlsx", 
+                       sheet = "Invoice details")
+order_items <- read_excel("C:/Users/Lenovo/Downloads/Database_Inventory_Management_Bodmas.xlsx", 
+                          sheet = "Order Item details")
+payments <- read_excel("C:/Users/Lenovo/Downloads/Database_Inventory_Management_Bodmas.xlsx", 
+                       sheet = "Payment Details")
+products <- read_excel("C:/Users/Lenovo/Downloads/Database_Inventory_Management_Bodmas.xlsx", 
+                       sheet = "Product Details")
+Suppliers <- read_excel("C:/Users/Lenovo/Downloads/Database_Inventory_Management_Bodmas.xlsx", 
+                        sheet = "Suppliers Details")
+users <- read_excel("C:/Users/Lenovo/Downloads/Database_Inventory_Management_Bodmas.xlsx", 
+                    sheet = "Users Details")
+
+# Convert order_date to Date format
+orders$order_date <- as.Date(orders$order_date)
+
+# Sales Trend Plot
+sales_plot <- ggplot(orders, aes(x = order_date, y = total_amount)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(color = "red") +
+  labs(title = "Sales Trend Over Time", x = "Order Date", y = "Total Sales") +
+  theme_minimal()
+
+print(sales_plot)
+
+# Count Orders by Status
+order_status_counts <- orders %>%
+  group_by(status) %>%
+  summarise(count = n())
+
+# Pie Chart
+status_pie <- ggplot(order_status_counts, aes(x = "", y = count, fill = status)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  labs(title = "Order Status Distribution") +
+  theme_minimal()
+
+print(status_pie)
+
+View(order_items$Description)
+colnames(order_items)
+
+# Aggregate Sales by Product
+top_products <- order_items %>%
+  group_by(Description) %>%
+  summarise(total_sold = sum(quantity)) %>%
+  arrange(desc(total_sold))
+
+# Bar Chart
+product_plot <- ggplot(top_products, aes(x = reorder(Description, total_sold), y = total_sold, fill = Description)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Top Selling Products", x = "Product", y = "Quantity Sold") +
+  theme_minimal() +
+  coord_flip()
+
+print(product_plot)
+
+# Count Payment Methods
+payment_counts <- payments %>%
+  group_by(payment_method) %>%
+  summarise(count = n())
+
+# Pie Chart
+payment_pie <- ggplot(payment_counts, aes(x = "", y = count, fill = payment_method)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  labs(title = "Payment Method Distribution") +
+  theme_minimal()
+
+print(payment_pie)
+
+# Count Customers by Location
+customer_locations <- Customers_Details %>%
+  group_by(address_customer) %>%
+  summarise(count = n())
+colnames(Customers_Details)
+
+
+# Bar Chart
+location_plot <- ggplot(customer_locations, aes(x = reorder(address_customer, count), y = count, fill = address_customer)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Number of Customers by Location", x = "City", y = "Count") +
+  theme_minimal() +
+  coord_flip()
+
+print(location_plot)
+
+#interactive charts
+ggplotly(sales_plot)
+
+ggplotly(product_plot)
+
