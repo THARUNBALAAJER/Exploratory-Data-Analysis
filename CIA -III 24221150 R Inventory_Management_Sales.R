@@ -1,0 +1,131 @@
+install.packages("DBI")       
+install.packages("RMySQL") 
+install.packages("ggplot2")   # For Data Visualization
+install.packages("dplyr")     # For Data Manipulation
+install.packages("plotly") # For Interactive Visuals
+
+library(DBI)
+library(readxl)
+library(plotly)
+library(dplyr)
+
+#Importing Data
+sales <- read_excel("C:/Users/Lenovo/Downloads/CIA_2_BODMAS_INVENTORY_MANAGEMENT_SALES.xlsx", sheet = "Sales")
+Inventory <- read_excel("C:/Users/Lenovo/Downloads/CIA_2_BODMAS_INVENTORY_MANAGEMENT_SALES.xlsx", sheet = "Inventory")
+Suppliers <- read_excel("C:/Users/Lenovo/Downloads/CIA_2_BODMAS_INVENTORY_MANAGEMENT_SALES.xlsx", sheet = "Suppliers")
+
+#Aggregate total quantity sold and total payment by product
+sales_summary <- sales %>%
+  group_by(Product) %>%
+  summarise(Total_Quantity = sum(Quantity),
+            Total_Payment = sum(Payment))
+
+#Bar plot - Quantity Sold
+ggplot(sales_summary, aes(x = Product, y = Total_Quantity, fill = Product)) +
+  geom_col() +
+  labs(title = "Total Quantity Sold by Product", y = "Quantity Sold") +
+  theme_minimal()
+
+#Bar plot - revenue 
+ggplot(sales_summary, aes(x = Product, y = Total_Payment, fill = Product)) +
+  geom_col() +
+  labs(title = "Total Revenue by Product", y = "Total Payment") +
+  theme_minimal()
+
+#creating a data included with date and manage data format
+sales$Date <- as.Date(sales$Date, format="%d-%m-%Y")
+
+#Calculating the daily sales value by the sale value and date
+Daily_sales <- sales %>%
+  group_by(Date) %>%
+  summarise(Total_Sales = sum(Payment), Quantity_Sold = sum(Quantity))
+
+ggplot(Daily_sales, aes(x = Date, y = Total_Sales)) +
+  geom_line(color = "steelblue", size = 1.2) +
+  geom_point() +
+  labs(title = "Daily Sales Trend", y = "Sales Amount") +
+  theme_minimal()
+
+#understanding the columns placed there in inventory table to assign what to find and how to find 
+colnames(Inventory)
+
+# plotting the income of actual and budget values
+ggplot(Inventory, aes(x = Product)) +
+  geom_col(aes(y = `Total Income(Actual)`, fill = "Actual"), position = "dodge") +
+  geom_col(aes(y = `Total Income(Budgeted)`, fill = "Budgeted"), position = "dodge") +
+  labs(title = "Actual vs Budgeted Income by Product", y = "Income") +
+  scale_fill_manual(values = c("Actual" = "darkgreen", "Budgeted" = "orange")) +
+  theme_minimal()
+
+#assigning the value and creating as supplier's sales and merger them by product
+supplier_sales <- merge(sales, Inventory, by = "Product")
+
+#Summarizing the supplier data with sales and payemnt
+supplier_summary <- supplier_sales %>%
+  group_by(supplier_name) %>%
+  summarise(Total_Sales = sum(Payment))
+
+#plotting the supplier summary
+ggplot(supplier_summary, aes(x = reorder(supplier_name, Total_Sales), y = Total_Sales, fill = supplier_name)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Total Sales by Supplier", y = "Sales Amount", x = "Supplier") +
+  theme_minimal()
+
+
+# Calculate sold percentage as Inventory data
+Inventory_data <- Inventory %>%
+  mutate(Sold_Percentage = (Sold / Total_product_Quantity) * 100)
+
+#Plotting them with bar chart 
+ggplot(Inventory_data, aes(x = Product, y = Sold_Percentage, fill = Product)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Sold Percentage by Product", y = "Sold %") +
+  theme_minimal()
+
+#Analyzing of top sales by the sale of product 
+top_events <- sales %>%
+  group_by(Description) %>%
+  summarise(Total_Sold = sum(Quantity)) %>%
+  arrange(desc(Total_Sold)) %>%
+  head(10)
+
+#Plotting them as top sales
+ggplot(top_events, aes(x = reorder(Description, Total_Sold), y = Total_Sold, fill = Description)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Top 10 Descriptions by Quantity Sold", x = "Description", y = "Quantity Sold") +
+  theme_minimal()
+
+# Mean Quantity and Payment by Gender
+gender_summary <- sales %>%
+  group_by(Gender) %>%
+  summarise(Avg_Quantity = mean(Quantity),
+            Avg_Payment = mean(Payment),
+            Total_Payment = sum(Payment))
+print(gender_summary)
+
+# Bar plot - Avg Quantity by Gender
+ggplot(gender_summary, aes(x = Gender, y = Avg_Quantity, fill = Gender)) +
+  geom_col() +
+  labs(title = "Average Quantity Purchased by Gender", y = "Average Quantity") +
+  theme_minimal()
+
+# Bar plot - Avg Payment by Gender
+ggplot(gender_summary, aes(x = Gender, y = Avg_Payment, fill = Gender)) +
+  geom_col() +
+  labs(title = "Average Payment by Gender", y = "Average Payment") +
+  theme_minimal()
+
+# Total quantity sold by product and gender
+gender_product_summary <- sales %>%
+  group_by(Gender, Product) %>%
+  summarise(Total_Quantity = sum(Quantity)) %>%
+  ungroup()
+
+# Plot
+ggplot(gender_product_summary, aes(x = Product, y = Total_Quantity, fill = Gender)) +
+  geom_col(position = "dodge") +
+  labs(title = "Product Preference by Gender", y = "Total Quantity Sold") +
+  theme_minimal()
+
